@@ -2,9 +2,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
-const GolfCourse = require("./GolfCourse"); // Import the GolfCourse model
-const Post = require("./PostSchema");
-const Like = require("./LikeSchema");
+const GolfCourse = require("./Schemas/GolfCourseSchema"); // Import the GolfCourse model
+const Post = require("./Schemas/PostSchema");
+const LikePost = require("./Schemas/PostLikeSchema");
+const Comment = require("./Schemas/CommentSchema");
+const CommentLike = require("./Schemas/CommentLikeSchema");
 
 dotenv.config();
 
@@ -26,7 +28,6 @@ mongoose
     console.error("Error connecting to MongoDB", err);
   });
 
-// Define a route to create a new golf course
 app.post("/golfcourses", async (req, res) => {
   try {
     const golfCourse = new GolfCourse(req.body);
@@ -37,7 +38,6 @@ app.post("/golfcourses", async (req, res) => {
   }
 });
 
-// Define a route to get all golf courses
 app.get("/golfcourses", async (req, res) => {
   try {
     const golfCourses = await GolfCourse.find();
@@ -67,28 +67,23 @@ app.get("/posts", async (req, res) => {
   }
 });
 
-app.post("/like", async (req, res) => {
+app.post("/likePost", async (req, res) => {
   const { userId, postId } = req.body;
-
   try {
-    // Create a new like
-    const like = new Like({ userId, postId });
-    await like.save();
-
-    // Update the like count in the post
+    const likePost = new LikePost({ userId, postId });
+    await likePost.save();
     await Post.findByIdAndUpdate(postId, { $inc: { likeCount: 1 } });
 
-    res.status(201).send(like);
+    res.status(201).send(likePost);
   } catch (err) {
-    console.error("Error saving like:", err); // Log the error for debugging
     res.status(500).send(err);
   }
 });
 
-app.post("/unlike", async (req, res) => {
+app.post("/unlikePost", async (req, res) => {
   const { userId, postId } = req.body;
   try {
-    await Like.deleteOne({ userId, postId });
+    await LikePost.deleteOne({ userId, postId });
 
     // Update the like count in the post
     await Post.findByIdAndUpdate(postId, { $inc: { likeCount: -1 } });
@@ -99,12 +94,68 @@ app.post("/unlike", async (req, res) => {
   }
 });
 
-app.get("/isLiked", async (req, res) => {
+app.get("/isPostLiked", async (req, res) => {
   const { postId, userId } = req.query;
 
   try {
-    const like = await Like.findOne({ userId, postId });
-    res.status(200).send(!!like);
+    const likePost = await LikePost.findOne({ userId, postId });
+    res.status(200).send(!!likePost);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/comments", async (req, res) => {
+  const { postId } = req.query;
+
+  try {
+    const comments = await Comment.find({ postId }).sort({ likeCount: -1 });
+    res.status(200).send(comments);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.post("/comments", async (req, res) => {
+  const { comment, postId } = req.body;
+  try {
+    console.log(comment);
+    const newComment = new Comment(comment);
+    await newComment.save();
+    await Post.findByIdAndUpdate(postId, { $inc: { numComments: 1 } });
+    res.status(200).send(newComment);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.post("/likeComment", async (req, res) => {
+  const { commentId, userId } = req.body;
+  try {
+    const newLike = new CommentLike({ userId, commentId });
+    await newLike.save();
+    await Comment.findByIdAndUpdate(commentId, { $inc: { likeCount: 1 } });
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.post("/unlikeComment", async (req, res) => {
+  const { commentId, userId } = req.body;
+  try {
+    await CommentLike.deleteOne({ commentId, userId });
+    await Comment.findByIdAndUpdate(commentId, { $inc: { likeCount: -1 } });
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get("/isCommentLiked", async (req, res) => {
+  const { commentId, userId } = req.query;
+
+  try {
+    const likeComment = await CommentLike.findOne({ commentId, userId });
+    res.status(200).send(!!likeComment);
   } catch (err) {
     res.status(500).send(err);
   }
