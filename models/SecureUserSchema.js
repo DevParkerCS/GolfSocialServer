@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const secureUserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  username: { type: String, required: true, unique: true },
   resetToken: { type: String },
 });
 
@@ -15,7 +16,7 @@ secureUserSchema.pre("save", async function (next) {
   next();
 });
 
-// Method to compare entered password with the hashed password
+// Function to compare entered password with the hashed password
 secureUserSchema.methods.comparePassword = function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
