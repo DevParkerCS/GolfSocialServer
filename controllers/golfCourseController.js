@@ -1,5 +1,6 @@
 const { GolfCourse } = require("../models/GolfCourseSchema");
 const PlayedCourses = require("../models/PlayedCoursesSchema");
+const jwt = require("jsonwebtoken");
 
 exports.createGolfCourse = async (req, res) => {
   try {
@@ -18,6 +19,7 @@ exports.getTopCourses = async (req, res) => {
       .limit(10);
     res.status(200).send(topCourses);
   } catch (err) {
+    console.log("ERROR::::" + err);
     res.status(500).send(err);
   }
 };
