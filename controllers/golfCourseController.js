@@ -19,7 +19,7 @@ exports.getTopCourses = async (req, res) => {
       .limit(10);
     res.status(200).send(topCourses);
   } catch (err) {
-    console.log("ERROR::::" + err);
+    console.log("ERROR:" + err);
     res.status(500).send(err);
   }
 };
