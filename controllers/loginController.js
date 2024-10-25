@@ -29,13 +29,17 @@ exports.postLogin = async (req, res) => {
         httpOnly: false,
         secure: false,
         sameSite: "Strict",
+        domain: "localhost",
+        path: "/",
         maxAge: 60 * 60 * 1000,
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: true,
+        secure: false,
         sameSite: "Strict",
+        domain: "localhost",
+        path: "/",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
       return res.status(201).json({ isError: false, user: publicUser });

@@ -11,8 +11,8 @@ const publicUserSchema = new mongoose.Schema(
     ],
     numFollowers: { type: Number, default: 0 },
     numFollowing: { type: Number, default: 0 },
-    totalScoreSum: { type: Number, default: null },
-    totalPlays: { type: Number, default: null },
+    totalScoreSum: { type: Number, default: 0 },
+    totalPlays: { type: Number, default: 0 },
     lowScore: { type: Number, default: null },
     highScore: { type: Number, default: null },
     mostPlayed: {

@@ -1,5 +1,6 @@
 const { GolfCourse } = require("../models/GolfCourseSchema");
 const PlayedCourses = require("../models/PlayedCoursesSchema");
+const PublicUser = require("../models/PublicUserSchema");
 const jwt = require("jsonwebtoken");
 
 exports.createGolfCourse = async (req, res) => {
@@ -60,7 +61,7 @@ exports.updatePlayedCourses = async (req, res) => {
     );
 
     if (result.modifiedCount === 0) {
-      // If no course was modified, the course does not exist, so push a new course
+      // If no course was modified, the course has not been played, so push a new course
       await PlayedCourses.updateOne(
         { userId },
         {
@@ -95,7 +96,28 @@ exports.updatePlayedCourses = async (req, res) => {
 
     await golfCourse.save();
 
-    res.status(200).json({ message: "Course updated successfully" });
+    // Update Public Player golf stats
+    const publicUser = await PublicUser.findById(userId);
+    const curHighScore = publicUser.highScore;
+    const curLowScore = publicUser.lowScore;
+    publicUser.highScore = curHighScore ? Math.max(curHighScore, score) : score;
+    publicUser.lowScore = curLowScore ? Math.min(curLowScore, lowScore) : score;
+    publicUser.totalPlays += 1;
+    publicUser.totalScoreSum += score;
+    if (curHighScore !== publicUser.highScore) {
+      publicUser.highRound.courseId = updateData.courseId;
+      publicUser.highRound.courseName = updateData.courseName;
+    }
+    if (curLowScore !== publicUser.lowScore) {
+      publicUser.lowRound.courseId = updateData.courseId;
+      publicUser.lowRound.courseName = updateData.courseName;
+    }
+
+    publicUser.save();
+
+    res
+      .status(200)
+      .json({ message: "Course updated successfully", user: publicUser });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }

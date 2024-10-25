@@ -6,6 +6,7 @@ const {
 const SecureUser = require("../models/SecureUserSchema");
 const bcrypt = require("bcrypt");
 const PublicUser = require("../models/PublicUserSchema");
+const RefreshToken = require("../models/RefreshTokenSchema");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
@@ -17,22 +18,32 @@ exports.getTokenValidated = async (req, res) => {
   const refreshToken = req.cookies.refreshToken;
 
   if (!refreshToken) {
-    return res.status(401).json({ isValid: false, message: "No token found" });
+    return res.status(200).json({ isValid: false, message: "No token found" });
   }
 
   if (!accessToken) {
     // Verify the refresh token if accessToken is missing or expired
     return jwt.verify(refreshToken, SECRET_REFRESH_KEY, async (err, user) => {
       if (err) {
-        return res
-          .status(403)
-          .json({
-            isValid: false,
-            message: "Refresh token expired or invalid",
-          });
+        return res.status(403).json({
+          isValid: false,
+          message: "Refresh token expired or invalid",
+        });
       }
 
       try {
+        // Check if the refresh token exists and is valid in the database
+        const foundToken = await RefreshToken.findOne({
+          refreshToken: refreshToken,
+          userId: user.userId,
+        });
+        if (!foundToken) {
+          return res.status(403).json({
+            isValid: false,
+            message: "Refresh token is invalid or revoked",
+          });
+        }
+
         // Find user in the database
         const foundUser = await PublicUser.findOne({ _id: user.userId });
         if (!foundUser) {
@@ -46,8 +57,8 @@ exports.getTokenValidated = async (req, res) => {
 
         // Set the new access token in the cookie
         res.cookie("accessToken", newAccessToken, {
-          httpOnly: true, // For security, prevent JavaScript access
-          secure: process.env.NODE_ENV === "production", // Use HTTPS in production
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
           sameSite: "Strict",
           maxAge: 60 * 60 * 1000, // 1 hour
         });
@@ -80,14 +91,11 @@ exports.getTokenValidated = async (req, res) => {
           .json({ isValid: false, message: "User not found" });
       }
 
-      // Token is valid, return the user
-      return res
-        .status(200)
-        .json({
-          isValid: true,
-          message: "Access token is valid",
-          user: foundUser,
-        });
+      return res.status(200).json({
+        isValid: true,
+        message: "Access token is valid",
+        user: foundUser,
+      });
     } catch (err) {
       return res
         .status(500)

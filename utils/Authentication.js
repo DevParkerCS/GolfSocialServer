@@ -21,14 +21,13 @@ exports.generateRefreshToken = async (user) => {
         expiresIn: "7d",
       }
     );
-    const encryptedToken = await bcrypt.hash(token, 10);
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + 7);
 
     const refreshToken = new RefreshToken({
       expiresAt: expiryDate,
       userId: user._id,
-      refreshToken: encryptedToken,
+      refreshToken: token,
     });
 
     await refreshToken.save();
